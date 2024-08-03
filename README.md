@@ -2,24 +2,24 @@
 
 ## Account and profile
 
-Editing my profile. (update)
-Signup, login, logout, delete account
+-   Editing my profile. (update)
+-   Signup, login, logout, delete account
 
 ## "User" role article-related actions
 
-Search for articles
-Read articles and their comments
+-   Search for articles
+-   Read articles and their comments
 
 ## "Author" role article-related actions
 
-Create an article
-Update and delete an article
+-   Create an article
+-   Update and delete an article
 
 ## Comment and like
 
-Comment on an article
-Edit and delete the comment
-Like and unlike article
+-   Comment on an article
+-   Edit and delete the comment
+-   Like and unlike article
 
 ## Search for users
 
