@@ -1,41 +1,48 @@
-# Actions:
+# Tiki Blog
 
-## Account and profile
+This is an API for a blogging platform.
 
--   Editing my profile. (update)
--   Signup, login, logout, delete account
+## Core features and user actions:
 
-## "User" role article-related actions
+### Account and profile
 
--   Search for articles
+-   Users can sign up, login, logout, and delete their account.
+-   Users can edit their profile.
+
+### Article-related actions, for Users
+
+-   Search for articles using pagination, filters, sorting and tags
 -   Read articles and their comments
 
-## "Author" role article-related actions
+### Article-related actions, for Authors
 
 -   Create an article
--   Update and delete an article
+-   Edit and delete an article
 
-## Comment and like
+### Comment and like
 
 -   Comment on an article
--   Edit and delete the comment
--   Like and unlike article
+-   Edit and delete a comment
+-   Like and unlike an article
 
-## Search for users
+### Other actions
 
-## Open another user's profile page
+-   Search for users
+-   Open another user's profile page
 
 ---
 
-# Test Suites
+## Test Suites
 
-## 1. Auth and account actions
+The test suites will cover the main actions described above.
+
+1. Auth and account actions
 
 -   Signup
 -   Login
 -   Logout
 -   Delete account
 
-## 2. "Author" role article-related actions
+2. "Author" role article-related actions
 
-## 3. "User" role article-related actions
+3. "User" role article-related actions
