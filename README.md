@@ -1,6 +1,6 @@
 # Tiki Blog
 
-This is an API for a blogging platform.
+This is an API for a blogging platform using the Express framework, Passport to handle authentication, Joi for request validation, Jest and Supertest for testing, and MongoDB and Mongoose for the database and document schemas respectively.
 
 ## Core features and user actions:
 
@@ -29,20 +29,3 @@ This is an API for a blogging platform.
 
 -   Search for users
 -   Open another user's profile page
-
----
-
-## Test Suites
-
-The test suites will cover the main actions described above.
-
-1. Auth and account actions
-
--   Signup
--   Login
--   Logout
--   Delete account
-
-2. "Author" role article-related actions
-
-3. "User" role article-related actions
