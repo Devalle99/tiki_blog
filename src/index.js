@@ -1,18 +1,8 @@
-const express = require("express");
-const mongoose = require("mongoose");
+require("dotenv").config();
 const app = require("./app");
 
-let server;
+const PORT = process.env.PORT || 3000;
 
-mongoose
-    .connect("mongodb://localhost:27017/tiki_blog")
-    .then(() => {
-        console.log("Connected successfully to the DB");
-
-        server = app.listen(3000, () => {
-            console.log("Server is running on port 3000");
-        });
-    })
-    .catch(() => {
-        console.error("Error connecting to the DB");
-    });
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});

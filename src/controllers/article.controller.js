@@ -10,7 +10,7 @@ const getArticles = catchAsync(async (req, res) => {
         ...filters
     } = req.query;
 
-    limit = limit > 25 ?? 25;
+    limit = limit > 25 ? 25 : limit;
 
     const sortOrder = order === "asc" ? 1 : -1;
 
@@ -29,57 +29,41 @@ const getArticles = catchAsync(async (req, res) => {
     });
 });
 
-const getArticle = async (req, res) => {
-    try {
-        const { articleId } = req.params;
-        const article = await Article.findById(articleId);
-        res.status(200).json(article);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+const getArticle = catchAsync(async (req, res) => {
+    const { articleId } = req.params;
+    const article = await Article.findById(articleId);
+    res.status(200).json(article);
+});
+
+const createArticle = catchAsync(async (req, res) => {
+    const userId = req.session.passport.user;
+
+    const article = { ...req.body, author: userId };
+
+    const result = await Article.create(article);
+
+    res.status(200).json(result);
+});
+
+const updateArticle = catchAsync(async (req, res) => {
+    const { articleId } = req.params;
+    const article = await Article.findByIdAndUpdate(articleId, req.body, {
+        new: true,
+    });
+    if (!article) {
+        return res.status(404).json({ message: "Article not found" });
     }
-};
+    res.status(200).json(article);
+});
 
-const createArticle = async (req, res) => {
-    try {
-        // Complete article to be created
-        const userId = req.session.passport.user;
-
-        const article = { ...req.body, author: userId };
-
-        const result = await Article.create(article);
-
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+const deleteArticle = catchAsync(async (req, res) => {
+    const { articleId } = req.params;
+    const article = await Article.findByIdAndDelete(articleId);
+    if (!article) {
+        return res.status(404).json({ message: "Article not found" });
     }
-};
-
-const updateArticle = async (req, res) => {
-    try {
-        const { articleId } = req.params;
-        const article = await Article.findByIdAndUpdate(articleId, req.body);
-        if (!article) {
-            return res.status(404).json({ message: "Article not found" });
-        }
-        const updatedArticle = await Article.findById(articleId);
-        res.status(200).json(updatedArticle);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-const deleteArticle = async (req, res) => {
-    try {
-        const { articleId } = req.params;
-        const article = await Article.findByIdAndDelete(articleId);
-        if (!article) {
-            return res.status(404).json({ message: "Article not found" });
-        }
-        res.status(200).json({ message: "Article deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+    res.status(200).json({ message: "Article deleted successfully" });
+});
 
 module.exports = {
     getArticles,

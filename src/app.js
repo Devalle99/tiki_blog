@@ -1,62 +1,37 @@
 const express = require("express");
 const session = require("express-session");
-var passport = require("passport");
+const passport = require("passport");
 const routes = require("./routes/v1");
-const mongoose = require("mongoose");
 const MongoStore = require("connect-mongo");
-// require("dotenv").config();
+const { connectDB, getClient } = require("./config/database");
 require("./config/passport");
+require("dotenv").config();
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-//////////////////////////////
-const conn = "mongodb://localhost:27017/tiki_blog";
+connectDB().then(() => {
+    app.use(
+        session({
+            secret: process.env.SECRET,
+            resave: false,
+            saveUninitialized: true,
+            cookie: {
+                maxAge: 1000 * 60 * 60 * 24,
+            },
+            store: MongoStore.create({
+                client: getClient(),
+                collectionName: "sessions",
+            }),
+        })
+    );
 
-// const connection = mongoose.createConnection(conn, {});
+    app.use(passport.initialize());
+    app.use(passport.session());
 
-// const sessionStore = MongoStore.create({
-//     mongoUrl: connection,
-//     collection: "sessions",
-// });
-
-app.use(
-    session({
-        secret: "papuliftshimself",
-        store: MongoStore.create({
-            mongoUrl: conn,
-            // collection: "sessions",
-        }),
-        resave: false,
-        saveUninitialized: true,
-        cookie: {
-            maxAge: 1000 * 60 * 60 * 24,
-        },
-    })
-);
-
-// ------------------------------------
-
-// app.use(
-//     session({
-//         secret: process.env.SECRET,
-//         store: MongoStore.create(options),
-//     })
-// );
-
-////////////////////////////////////
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// app.use((req, res, next) => {
-//     console.log(req.session);
-//     console.log(req.user);
-//     next();
-// });
-
-app.use("/api/v1", routes);
+    app.use("/api/v1", routes);
+});
 
 module.exports = app;

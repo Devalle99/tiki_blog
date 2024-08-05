@@ -10,6 +10,6 @@ router.post("/signup", authController.signup);
 
 router.post("/logout", verifyAuth, authController.logout);
 
-router.delete("/deleteAccount", verifyAuth, authController.deleteAccount);
+router.delete("/delete-account", verifyAuth, authController.deleteAccount);
 
 module.exports = router;

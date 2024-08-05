@@ -1,29 +1,21 @@
 const passport = require("passport");
 const { User, Article } = require("../models");
 const generatePassword = require("../utils/passwordUtils").generatePassword;
+const catchAsync = require("../utils/catchAsync");
 
-const signup = (req, res, next) => {
-    try {
-        const saltHash = generatePassword(req.body.password);
+const signup = catchAsync(async (req, res, next) => {
+    const { hash, salt } = generatePassword(req.body.password);
 
-        const salt = saltHash.salt;
-        const hash = saltHash.hash;
+    const newUser = new User({
+        username: req.body.username,
+        hash,
+        salt,
+    });
 
-        const newUser = new User({
-            username: req.body.username,
-            hash,
-            salt,
-        });
+    await newUser.save();
 
-        newUser.save().then((user) => {
-            console.log(user);
-        });
-
-        res.status(201).json({ message: "User created" });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
+    res.status(201).json({ message: "User created successfully" });
+});
 
 const login = (req, res, next) => {
     passport.authenticate("local", (err, user, info) => {
@@ -33,7 +25,7 @@ const login = (req, res, next) => {
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: "Fallo en la autenticación",
+                message: "Failed to authenticate",
                 info,
             });
         }
@@ -44,8 +36,7 @@ const login = (req, res, next) => {
 
             return res.json({
                 success: true,
-                message: "Autenticación exitosa",
-                user,
+                message: "Authenticated successfully",
             });
         });
     })(req, res, next);
@@ -56,36 +47,38 @@ const logout = (req, res) => {
         if (err) {
             return res.status(500).json({
                 success: false,
-                message: "Error al cerrar sesión",
+                message: "Failed to log out",
                 error: err,
             });
         }
-        res.json({ success: true, message: "Sesión cerrada exitosamente" });
+        res.status(200).json({
+            success: true,
+            message: "Logged out successfully",
+        });
     });
 };
 
-const deleteAccount = async (req, res) => {
-    try {
-        const id = req.session.passport.user;
+const deleteAccount = catchAsync(async (req, res) => {
+    const id = req.session.passport.user;
 
-        const user = await User.findByIdAndDelete(id);
-        if (!user) {
-            return res.status(404).json({ message: "User not found" });
-        }
-
-        const updatedArticles = await Article.updateMany(
-            { author: id },
-            { $set: { authorHasLeft: true } }
-        );
-
-        res.status(200).json({
-            message: "User deleted successfully",
-            modifiedArticles: updatedArticles.modifiedCount,
-        });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    const user = await User.findByIdAndDelete(id);
+    if (!user) {
+        return res
+            .status(404)
+            .json({ success: false, message: "User not found" });
     }
-};
+
+    const updatedArticles = await Article.updateMany(
+        { author: id },
+        { $set: { authorHasLeft: true } }
+    );
+
+    res.status(200).json({
+        success: true,
+        message: "User deleted successfully",
+        modifiedArticleCount: updatedArticles.modifiedCount,
+    });
+});
 
 module.exports = {
     signup,
