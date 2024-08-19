@@ -1,5 +1,6 @@
 const Joi = require("joi");
 const pick = require("../utils/pick");
+const ApiError = require("../utils/ApiError");
 
 const validate = (schema) => (req, res, next) => {
     const validSchema = pick(schema, ["params", "query", "body"]);
@@ -10,7 +11,7 @@ const validate = (schema) => (req, res, next) => {
 
     if (error) {
         const errorMessages = error.details.map((detail) => detail.message);
-        return res.status(400).json({ errors: errorMessages });
+        return next(new ApiError(400, errorMessages));
     }
     Object.assign(req, value);
     return next();

@@ -1,13 +1,20 @@
 const Joi = require("joi");
+const { objectId } = require("./custom.validation");
 
-const create = Joi.object().keys({
-    title: Joi.string().required(),
-    content: Joi.string().required(),
-    tags: Joi.array().items(Joi.string),
-    excerpt: Joi.string(),
-    status: Joi.string(),
-    thumbnailUrl: Joi.string(),
-    slug: Joi.string(),
-});
+const list = {
+    query: Joi.object().keys({
+        inTitle: Joi.string(),
+        forAuthor: Joi.boolean(),
+    }),
+};
 
-module.exports = create;
+const getById = {
+    params: Joi.object().keys({
+        articleId: Joi.string().required().custom(objectId),
+    }),
+};
+
+module.exports = {
+    list,
+    getById,
+};

@@ -6,6 +6,8 @@ const MongoStore = require("connect-mongo");
 const { connectDB, getClient } = require("./config/database");
 require("./config/passport");
 require("dotenv").config();
+const ApiError = require("./utils/ApiError");
+const errorHandler = require("./middlewares/errorHandler");
 
 const app = express();
 
@@ -32,6 +34,13 @@ connectDB().then(() => {
     app.use(passport.session());
 
     app.use("/api/v1", routes);
+
+    // send back a 404 error for any unknown api request
+    app.use((req, res, next) => {
+        next(new ApiError(404, "Not found"));
+    });
+
+    app.use(errorHandler);
 });
 
 module.exports = app;

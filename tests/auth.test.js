@@ -1,9 +1,9 @@
 const request = require("supertest");
 const app = require("../src/app");
-const { clear, createTestUser } = require("./mainSetup");
+const { clearDB, generateSetup } = require("./setup/mainSetup");
 
 afterEach(async () => {
-    await clear();
+    await clearDB();
 });
 
 describe("Signup", () => {
@@ -13,6 +13,7 @@ describe("Signup", () => {
             .send({ username: "username", password: "password" });
 
         expect(res.statusCode).toEqual(201);
+        expect(res.body).toHaveProperty("success", true);
         expect(res.body).toHaveProperty("message", "User created successfully");
     });
 
@@ -24,14 +25,19 @@ describe("Signup", () => {
 });
 
 describe("Login", () => {
+    let setup;
+
     beforeEach(async () => {
-        await createTestUser();
+        setup = generateSetup(app);
+        await setup.createUser();
     });
 
     it("should login a user successfully", async () => {
+        expect(setup.credentials).toBeTruthy();
+
         const res = await request(app)
             .post("/api/v1/auth/login")
-            .send({ username: "testUser", password: "password" });
+            .send(setup.credentials);
 
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty("success", true);
@@ -64,19 +70,16 @@ describe("Login", () => {
 
 describe("Logout", () => {
     it("should logout a user successfully", async () => {
-        await createTestUser();
+        const setup = generateSetup(app);
+        await setup.createUser();
+        await setup.login();
 
-        const loginResponse = await request(app)
-            .post("/api/v1/auth/login")
-            .send({ username: "testUser", password: "password" });
-
-        expect(loginResponse.statusCode).toEqual(200);
-
-        const cookie = loginResponse.headers["set-cookie"];
+        expect(setup.credentials).toBeTruthy();
+        expect(setup.cookie).toBeTruthy();
 
         const logoutResponse = await request(app)
             .post("/api/v1/auth/logout")
-            .set("Cookie", cookie);
+            .set("Cookie", setup.cookie);
 
         expect(logoutResponse.statusCode).toEqual(200);
         expect(logoutResponse.body).toHaveProperty("success", true);
@@ -97,19 +100,15 @@ describe("Logout", () => {
 
 describe("Delete account", () => {
     it("should delete the user's account successfully", async () => {
-        await createTestUser();
+        const setup = generateSetup(app);
+        await setup.createUser();
+        await setup.login();
 
-        const loginResponse = await request(app)
-            .post("/api/v1/auth/login")
-            .send({ username: "testUser", password: "password" });
-
-        expect(loginResponse.statusCode).toEqual(200);
-
-        const cookie = loginResponse.headers["set-cookie"];
+        expect(setup.cookie).toBeTruthy();
 
         const res = await request(app)
             .delete("/api/v1/auth/delete-account")
-            .set("Cookie", cookie);
+            .set("Cookie", setup.cookie);
 
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty("success", true);

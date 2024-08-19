@@ -1,74 +1,169 @@
-const { Article } = require("../models");
+const { Article, Like } = require("../models");
 const catchAsync = require("../utils/catchAsync");
+const wordCount = require("word-count");
 
-const getArticles = catchAsync(async (req, res) => {
+const listArticles = catchAsync(async (req, res) => {
     let {
+        searchIn = "title",
         page = 1,
         limit = 10,
-        sortBy = "createdAt",
-        order = "desc",
-        ...filters
-    } = req.query;
+        searchQuery = null,
+    } = req.body;
 
-    limit = limit > 25 ? 25 : limit;
+    const aggregationPipeline = [
+        {
+            $match: {
+                status: "published",
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "author",
+                foreignField: "_id",
+                as: "authorDetails",
+            },
+        },
+        {
+            $unwind: "$authorDetails",
+        },
+    ];
 
-    const sortOrder = order === "asc" ? 1 : -1;
+    if (searchQuery) {
+        if (searchIn === "author") {
+            aggregationPipeline.push({
+                $match: {
+                    "authorDetails.username": new RegExp(searchQuery, "i"),
+                },
+            });
+        } else if (searchIn === "tag") {
+            aggregationPipeline.push({
+                $lookup: {
+                    from: "tags",
+                    localField: "tags",
+                    foreignField: "_id",
+                    as: "tagDetails",
+                },
+            });
+            aggregationPipeline.push({ $unwind: "$tagDetails" });
+            aggregationPipeline.push({
+                $match: {
+                    "tagDetails.name": new RegExp(searchQuery, "i"),
+                },
+            });
+        } else if (searchIn === "title") {
+            aggregationPipeline.push({
+                $match: {
+                    title: new RegExp(searchQuery, "i"),
+                },
+            });
+        }
+    }
 
-    const articles = await Article.find(filters)
-        .sort({ [sortBy]: sortOrder })
-        .skip((page - 1) * limit)
-        .limit(Number(limit));
+    aggregationPipeline.push(
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "articleId",
+                as: "likes",
+            },
+        },
+        {
+            $addFields: {
+                likeCount: { $size: "$likes" },
+                commentCount: { $size: "$comments" },
+            },
+        },
+        {
+            $sort: {
+                viewCount: -1,
+                likeCount: -1,
+                commentCount: -1,
+            },
+        },
+        {
+            $skip: (page - 1) * Number(limit),
+        },
+        {
+            $limit: Number(limit),
+        },
+        {
+            $project: {
+                title: 1,
+                content: 1,
+                author: {
+                    _id: "$author",
+                    username: "$authorDetails.username",
+                },
+                excerpt: 1,
+                status: 1,
+                viewCount: 1,
+                likeCount: 1,
+                commentCount: 1,
+                thumbnailUrl: 1,
+                slug: 1,
+                readTime: 1,
+                authorHasLeft: 1,
+                createdAt: 1,
+                updatedAt: 1,
+            },
+        }
+    );
 
-    const totalArticles = await Article.countDocuments(filters);
+    const articlesAggregation = await Article.aggregate(aggregationPipeline);
 
-    res.status(200).json({
-        total: totalArticles,
-        page: Number(page),
-        limit: Number(limit),
-        articles,
-    });
+    const totalArticles = articlesAggregation.length;
+
+    if (totalArticles === 0) {
+        res.status(404).json({
+            success: false,
+            message: "No articles were found for the query",
+        });
+    } else {
+        res.status(200).json({
+            success: true,
+            message: "The article(s) were retrieved successfully",
+            total: totalArticles,
+            page: Number(page),
+            limit: Number(limit),
+            result: articlesAggregation,
+        });
+    }
 });
 
 const getArticle = catchAsync(async (req, res) => {
+    // TODO: devolver el articulo solamente si tiene status published
     const { articleId } = req.params;
-    const article = await Article.findById(articleId);
-    res.status(200).json(article);
-});
 
-const createArticle = catchAsync(async (req, res) => {
-    const userId = req.session.passport.user;
+    const article = await Article.findById(articleId)
+        .populate("author", "username")
+        .populate("tags", "name")
+        .exec();
 
-    const article = { ...req.body, author: userId };
+    if (!article) {
+        return res.status(404).json({
+            success: false,
+            message: "The article was not found",
+        });
+    }
 
-    const result = await Article.create(article);
+    const likeCount = await Like.countDocuments({ articleId });
 
-    res.status(200).json(result);
-});
+    const commentCount = article.comments.length;
 
-const updateArticle = catchAsync(async (req, res) => {
-    const { articleId } = req.params;
-    const article = await Article.findByIdAndUpdate(articleId, req.body, {
-        new: true,
+    res.status(200).json({
+        success: true,
+        message: "The article was retrieved successfully",
+        result: {
+            ...article.toObject(),
+            likeCount,
+            commentCount,
+        },
     });
-    if (!article) {
-        return res.status(404).json({ message: "Article not found" });
-    }
-    res.status(200).json(article);
-});
-
-const deleteArticle = catchAsync(async (req, res) => {
-    const { articleId } = req.params;
-    const article = await Article.findByIdAndDelete(articleId);
-    if (!article) {
-        return res.status(404).json({ message: "Article not found" });
-    }
-    res.status(200).json({ message: "Article deleted successfully" });
 });
 
 module.exports = {
-    getArticles,
+    listArticles,
     getArticle,
-    createArticle,
-    updateArticle,
-    deleteArticle,
 };

@@ -10,6 +10,10 @@ const connectDB = async () => {
                 ? global.__MONGO_URI__
                 : process.env.MONGO_URI;
 
+        if (!uri) {
+            throw new Error("No URI provided for database connection");
+        }
+
         conn = await mongoose.connect(uri);
         console.log("Connected successfully to the DB");
     }
