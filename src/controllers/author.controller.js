@@ -7,7 +7,7 @@ const listArticles = catchAsync(async (req, res) => {
     let {
         status = null,
         title = null,
-        order = "desc",
+        order = "desc", // Sort by publication date
         page = 1,
         limit = 10,
     } = req.query;
@@ -40,6 +40,19 @@ const listArticles = catchAsync(async (req, res) => {
     }
 
     aggregationPipeline.push(
+        {
+            $lookup: {
+                from: "users",
+                localField: "author",
+                foreignField: "_id",
+                as: "author",
+            },
+        },
+        {
+            $unwind: {
+                path: "$author",
+            },
+        },
         {
             $lookup: {
                 from: "tags",
@@ -77,11 +90,13 @@ const listArticles = catchAsync(async (req, res) => {
             $project: {
                 title: 1,
                 content: 1,
-                "tags._id": 1,
-                "tags.name": 1,
+                "author._id": 1,
+                "author.username": 1,
                 excerpt: 1,
                 publicationDate: 1,
                 status: 1,
+                "tags._id": 1,
+                "tags.name": 1,
                 viewCount: 1,
                 likeCount: 1,
                 commentCount: 1,
@@ -102,14 +117,18 @@ const listArticles = catchAsync(async (req, res) => {
         res.status(404).json({
             success: false,
             message: "No articles were found for the query",
+            total: 0,
+            page,
+            limit,
+            result: [],
         });
     } else {
         res.status(200).json({
             success: true,
             message: "The article(s) were retrieved successfully",
             total: totalArticles,
-            page: page,
-            limit: limit,
+            page,
+            limit,
             result: articlesAggregation,
         });
     }
@@ -118,7 +137,11 @@ const listArticles = catchAsync(async (req, res) => {
 const getArticle = catchAsync(async (req, res) => {
     const { articleId } = req.params;
 
-    const article = await Article.findById(articleId)
+    const article = await Article.findById(articleId, {
+        readTime: 0,
+        authorHasLeft: 0,
+        __v: 0,
+    })
         .populate("author", "username")
         .populate("tags", "name")
         .exec();
@@ -134,14 +157,19 @@ const getArticle = catchAsync(async (req, res) => {
 
     const commentCount = article.comments.length;
 
+    const result = {
+        ...article.toObject(),
+        likeCount,
+        commentCount,
+    };
+
+    // The array of comments is ommited, while the comment count is kept
+    delete result.comments;
+
     res.status(200).json({
         success: true,
         message: "The article was retrieved successfully",
-        result: {
-            ...article.toObject(),
-            likeCount,
-            commentCount,
-        },
+        result,
     });
 });
 
@@ -152,11 +180,23 @@ const createArticle = catchAsync(async (req, res) => {
 
     const article = { ...req.body, author: userId, readTime };
 
-    const result = await Article.create(article);
+    const createdArticle = await Article.create(article);
+
+    const result = await Article.findById(createdArticle._id, {
+        viewCount: 0,
+        authorHasLeft: 0,
+        comments: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        __v: 0,
+    })
+        .populate("author", "username")
+        .populate("tags", "name")
+        .exec();
 
     res.status(200).json({
         success: true,
-        message: "The article was created sucessfully",
+        message: "The article was created successfully",
         result,
     });
 });
@@ -170,17 +210,31 @@ const updateArticle = catchAsync(async (req, res) => {
         req.body.readTime = readTime;
     }
 
-    const article = await Article.findByIdAndUpdate(articleId, req.body, {
-        new: true, // return article after update
-    });
+    const updatedArticle = await Article.findByIdAndUpdate(articleId, req.body);
 
-    if (!article) {
+    if (!updatedArticle) {
         return res.status(404).json({
             success: false,
             message: "The article was not found",
         });
     }
-    res.status(200).json(article);
+
+    const result = await Article.findById(updatedArticle._id, {
+        authorHasLeft: 0,
+        comments: 0,
+        createdAt: 0,
+        updatedAt: 0,
+        __v: 0,
+    })
+        .populate("author", "username")
+        .populate("tags", "name")
+        .exec();
+
+    res.status(200).json({
+        success: true,
+        message: "The article was updated successfully",
+        result,
+    });
 });
 
 const deleteArticle = catchAsync(async (req, res) => {

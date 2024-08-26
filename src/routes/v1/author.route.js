@@ -21,6 +21,7 @@ router.get(
     verifyAuth,
     checkRole("author"),
     validate(authorValidation.get),
+    verifyArticleAuthorship,
     authorController.getArticle
 );
 
@@ -36,8 +37,8 @@ router.put(
     "/articles/:articleId",
     verifyAuth,
     checkRole("author"),
-    verifyArticleAuthorship,
     validate(authorValidation.update),
+    verifyArticleAuthorship,
     authorController.updateArticle
 );
 
@@ -45,8 +46,8 @@ router.delete(
     "/articles/:articleId",
     verifyAuth,
     checkRole("author"),
-    verifyArticleAuthorship,
     validate(authorValidation.deleteById),
+    verifyArticleAuthorship,
     authorController.deleteArticle
 );
 

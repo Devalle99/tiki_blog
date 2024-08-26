@@ -29,7 +29,6 @@ const login = (req, res, next) => {
             return res.status(401).json({
                 success: false,
                 message: "Failed to authenticate",
-                info,
             });
         }
         req.logIn(user, (err) => {

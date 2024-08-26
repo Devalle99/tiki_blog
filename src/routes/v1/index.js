@@ -5,6 +5,7 @@ const commentRoute = require("./comment.route");
 const tagRoute = require("./tag.route");
 const userRoute = require("./user.route");
 const authRoute = require("./auth.route");
+const adminRoute = require("./admin.route");
 
 const router = express.Router();
 
@@ -32,6 +33,10 @@ const defaultRoutes = [
     {
         path: "/auth",
         route: authRoute,
+    },
+    {
+        path: "/admin",
+        route: adminRoute,
     },
 ];
 

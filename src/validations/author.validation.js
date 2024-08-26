@@ -18,11 +18,11 @@ const articleTitle = (value, helpers) => {
 };
 
 const articleContent = (value, helpers) => {
-    // if (wordCount(value) < 30) {
-    //     return helpers.message(
-    //         "article content must be at least 30 words long"
-    //     );
-    // }
+    if (wordCount(value) < 30) {
+        return helpers.message(
+            "article content must be at least 30 words long"
+        );
+    }
     if (wordCount(value) > 2500) {
         return helpers.message(
             "article content cannot be longer than 2500 words"

@@ -1,14 +1,17 @@
 const { Article, Like } = require("../models");
 const catchAsync = require("../utils/catchAsync");
-const wordCount = require("word-count");
 
 const listArticles = catchAsync(async (req, res) => {
     let {
-        searchIn = "title",
+        title = null,
+        sort = "relevance",
+        order = "desc",
         page = 1,
         limit = 10,
-        searchQuery = null,
-    } = req.body;
+    } = req.query;
+
+    page = Number(page);
+    limit = Number(limit);
 
     const aggregationPipeline = [
         {
@@ -29,38 +32,23 @@ const listArticles = catchAsync(async (req, res) => {
         },
     ];
 
-    if (searchQuery) {
-        if (searchIn === "author") {
-            aggregationPipeline.push({
-                $match: {
-                    "authorDetails.username": new RegExp(searchQuery, "i"),
-                },
-            });
-        } else if (searchIn === "tag") {
-            aggregationPipeline.push({
-                $lookup: {
-                    from: "tags",
-                    localField: "tags",
-                    foreignField: "_id",
-                    as: "tagDetails",
-                },
-            });
-            aggregationPipeline.push({ $unwind: "$tagDetails" });
-            aggregationPipeline.push({
-                $match: {
-                    "tagDetails.name": new RegExp(searchQuery, "i"),
-                },
-            });
-        } else if (searchIn === "title") {
-            aggregationPipeline.push({
-                $match: {
-                    title: new RegExp(searchQuery, "i"),
-                },
-            });
-        }
+    if (title) {
+        aggregationPipeline.push({
+            $match: {
+                title: new RegExp(title, "i"),
+            },
+        });
     }
 
     aggregationPipeline.push(
+        {
+            $lookup: {
+                from: "tags",
+                localField: "tags",
+                foreignField: "_id",
+                as: "tags",
+            },
+        },
         {
             $lookup: {
                 from: "likes",
@@ -74,19 +62,31 @@ const listArticles = catchAsync(async (req, res) => {
                 likeCount: { $size: "$likes" },
                 commentCount: { $size: "$comments" },
             },
+        }
+    );
+
+    let sortOptions = {};
+
+    if (sort === "relevance") {
+        sortOptions = {
+            viewCount: order === "asc" ? 1 : -1,
+            likeCount: order === "asc" ? 1 : -1,
+            commentCount: order === "asc" ? 1 : -1,
+        };
+    } else if (sort === "publicationDate") {
+        sortOptions = {
+            publicationDate: order === "asc" ? 1 : -1,
+        };
+    }
+
+    aggregationPipeline.push({ $sort: sortOptions });
+
+    aggregationPipeline.push(
+        {
+            $skip: (page - 1) * limit,
         },
         {
-            $sort: {
-                viewCount: -1,
-                likeCount: -1,
-                commentCount: -1,
-            },
-        },
-        {
-            $skip: (page - 1) * Number(limit),
-        },
-        {
-            $limit: Number(limit),
+            $limit: limit,
         },
         {
             $project: {
@@ -97,16 +97,18 @@ const listArticles = catchAsync(async (req, res) => {
                     username: "$authorDetails.username",
                 },
                 excerpt: 1,
-                status: 1,
+                "tags._id": 1,
+                "tags.name": 1,
                 viewCount: 1,
                 likeCount: 1,
                 commentCount: 1,
                 thumbnailUrl: 1,
                 slug: 1,
                 readTime: 1,
-                authorHasLeft: 1,
+                publicationDate: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                authorHasLeft: 1,
             },
         }
     );
@@ -125,18 +127,21 @@ const listArticles = catchAsync(async (req, res) => {
             success: true,
             message: "The article(s) were retrieved successfully",
             total: totalArticles,
-            page: Number(page),
-            limit: Number(limit),
+            page: page,
+            limit: limit,
             result: articlesAggregation,
         });
     }
 });
 
 const getArticle = catchAsync(async (req, res) => {
-    // TODO: devolver el articulo solamente si tiene status published
     const { articleId } = req.params;
 
-    const article = await Article.findById(articleId)
+    const article = await Article.findOneAndUpdate(
+        { _id: articleId, status: "published" },
+        { $inc: { viewCount: 1 } }, // Increment the viewCount
+        { new: false } // Return the article before incrementing the viewCount
+    )
         .populate("author", "username")
         .populate("tags", "name")
         .exec();
@@ -149,17 +154,21 @@ const getArticle = catchAsync(async (req, res) => {
     }
 
     const likeCount = await Like.countDocuments({ articleId });
-
     const commentCount = article.comments.length;
+
+    const result = {
+        ...article.toObject(),
+        likeCount,
+        commentCount,
+    };
+
+    delete result.status;
+    delete result.__v;
 
     res.status(200).json({
         success: true,
         message: "The article was retrieved successfully",
-        result: {
-            ...article.toObject(),
-            likeCount,
-            commentCount,
-        },
+        result,
     });
 });
 

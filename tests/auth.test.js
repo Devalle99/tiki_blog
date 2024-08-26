@@ -10,7 +10,7 @@ describe("Signup", () => {
     it("should signup a user successfully", async () => {
         const res = await request(app)
             .post("/api/v1/auth/signup")
-            .send({ username: "username", password: "password" });
+            .send({ username: "username", password: "Password1234" });
 
         expect(res.statusCode).toEqual(201);
         expect(res.body).toHaveProperty("success", true);
@@ -26,18 +26,21 @@ describe("Signup", () => {
 
 describe("Login", () => {
     let setup;
+    const user = { username: "testUser", password: "Password1234" };
+    let credentials;
 
     beforeEach(async () => {
-        setup = generateSetup(app);
-        await setup.createUser();
+        setup = await generateSetup(app);
+        credentials = await setup.createUser(user);
     });
 
     it("should login a user successfully", async () => {
-        expect(setup.credentials).toBeTruthy();
+        expect(credentials).toHaveProperty("username", user.username);
+        expect(credentials).toHaveProperty("password", user.password);
 
         const res = await request(app)
             .post("/api/v1/auth/login")
-            .send(setup.credentials);
+            .send(credentials);
 
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty("success", true);
@@ -48,9 +51,13 @@ describe("Login", () => {
     });
 
     it("should fail to login with incorrect password", async () => {
-        const res = await request(app)
-            .post("/api/v1/auth/login")
-            .send({ username: "testUser", password: "wrongpassword" });
+        expect(credentials).toHaveProperty("username", user.username);
+        expect(credentials).toHaveProperty("password", user.password);
+
+        const res = await request(app).post("/api/v1/auth/login").send({
+            username: credentials.username,
+            password: "wrongpassword",
+        });
 
         expect(res.statusCode).toEqual(401);
         expect(res.body).toHaveProperty("success", false);
@@ -70,16 +77,21 @@ describe("Login", () => {
 
 describe("Logout", () => {
     it("should logout a user successfully", async () => {
-        const setup = generateSetup(app);
-        await setup.createUser();
-        await setup.login();
+        const setup = await generateSetup(app);
+        const user = {
+            username: "testUser",
+            password: "Password1234",
+        };
+        const credentials = await setup.createUser(user);
+        const cookie = await setup.login(credentials);
 
-        expect(setup.credentials).toBeTruthy();
-        expect(setup.cookie).toBeTruthy();
+        expect(credentials).toHaveProperty("username", user.username);
+        expect(credentials).toHaveProperty("password", user.password);
+        expect(cookie).toBeTruthy();
 
         const logoutResponse = await request(app)
             .post("/api/v1/auth/logout")
-            .set("Cookie", setup.cookie);
+            .set("Cookie", cookie);
 
         expect(logoutResponse.statusCode).toEqual(200);
         expect(logoutResponse.body).toHaveProperty("success", true);
@@ -100,15 +112,19 @@ describe("Logout", () => {
 
 describe("Delete account", () => {
     it("should delete the user's account successfully", async () => {
-        const setup = generateSetup(app);
-        await setup.createUser();
-        await setup.login();
+        const setup = await generateSetup(app);
+        const user = {
+            username: "testUser",
+            password: "Password1234",
+        };
+        const credentials = await setup.createUser(user);
+        const cookie = await setup.login(credentials);
 
-        expect(setup.cookie).toBeTruthy();
+        expect(cookie).toBeTruthy();
 
         const res = await request(app)
             .delete("/api/v1/auth/delete-account")
-            .set("Cookie", setup.cookie);
+            .set("Cookie", cookie);
 
         expect(res.statusCode).toEqual(200);
         expect(res.body).toHaveProperty("success", true);
