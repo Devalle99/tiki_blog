@@ -17,7 +17,23 @@ const password = (value, helpers) => {
     return value;
 };
 
+const username = (value, helpers) => {
+    if (value.length < 3) {
+        return helpers.message("username must be at least 3 characters");
+    }
+    if (value.length > 20) {
+        return helpers.message("username must be at most 20 characters");
+    }
+    if (!value.match(/^[\w-]+$/)) {
+        return helpers.message(
+            "username can only contain alphanumeric characters, low dashes and dashes"
+        );
+    }
+    return value;
+};
+
 module.exports = {
     objectId,
     password,
+    username,
 };

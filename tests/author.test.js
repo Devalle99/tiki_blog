@@ -719,7 +719,7 @@ describe("Requests made by an author that didn't create the article he is trying
             .send({ title: "New article title" })
             .set("Cookie", cookie1);
 
-        // expect(response.statusCode).toBe(403);
+        expect(response.statusCode).toBe(403);
         expect(response.body.success).toBe(false);
         expect(response.body.message).toBe(
             "You are not the author of the resource you are trying to manage"

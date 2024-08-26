@@ -23,6 +23,9 @@ Articles can either have a "draft" or a "published" status. If the author wants 
 -   View the main feed
 -   Search for articles by title
 -   Search for tags, which then point to associated articles
+    -   `GET /tags`
+    -   `GET /tags/<tagId>`
+    -   `GET /tags/<tagId>/articles`
 -   Read articles, give them a like or comment on them
 
 ### Other actions
@@ -30,6 +33,7 @@ Articles can either have a "draft" or a "published" status. If the author wants 
 -   Unlike an article
 -   Edit and delete a comment
 -   View the author's bio page
+    -   `GET /author/bio`
 
 ## Design notes:
 

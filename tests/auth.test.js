@@ -20,7 +20,7 @@ describe("Signup", () => {
     it("should fail to signup without both a password and a username", async () => {
         const res = await request(app).post("/api/v1/auth/signup").send({});
 
-        expect(res.statusCode).toEqual(500);
+        expect(res.statusCode).toEqual(400);
     });
 });
 

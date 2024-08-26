@@ -32,7 +32,7 @@ const generateSetup = async (app) => {
     // Create admin user
     const { User } = require("../../src/models");
 
-    const { hash, salt } = generatePassword("password");
+    const { hash, salt } = generatePassword("Password1234");
 
     const adminUser = new User({
         username: "adminUser",
@@ -45,7 +45,7 @@ const generateSetup = async (app) => {
 
     const loginResponse = await request(app)
         .post("/api/v1/auth/login")
-        .send({ username: "adminUser", password: "password" });
+        .send({ username: "adminUser", password: "Password1234" });
 
     const adminCookie = loginResponse.headers["set-cookie"].find((cookie) =>
         cookie.startsWith("connect.sid")
